@@ -1,0 +1,9 @@
+python3, a flash card script. A flag to make a new deck, and takes in a string for the deck's name. Once a name is given, the script will save it as a .dck (JSON) file, in the current working directory.
+Flag to output a deck file, formatted in JSON text, that takes a string to name the .dck file. Format the file with the extension, .dck
+Flag to import a deck file, .dck. Script is to autocomplete the names of the files in the current working directory, for importing, in the folder when pressing TAB on the keyboard.
+
+Script will have an edit flag and a study flag. Edit flag will import a deck and enter loop where the script will use three flags, create, delete, and list. The create flag will take 2 arguments, string for question, and string for answer. Delete flag will take an int of index of the card. After a card is created or delted, the deck will be resaved. List flag will list all cards from current deck, with page returns between each question and answer combo. Edit mode will import a deck and enter a loop for replying either y or n, to the current deck question.
+
+Flag to randomized questions asked.
+The script will print the question, and on enter key, will show the answer. Then will give the option to input if I got the answer correct, with a y/n letter input.
+If a card is answered correctly (with a y), the card is taken out of the questioning cycle.
