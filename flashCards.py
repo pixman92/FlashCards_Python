@@ -91,6 +91,7 @@ def study_cards():
     print("Studying deck: " + deck_name)
     cards = deck[:]
 
+
     while cards:
         for card in cards:
             print("\nQuestion: " + card[1][0])
