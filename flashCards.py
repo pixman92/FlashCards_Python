@@ -1,117 +1,218 @@
-import argparse
-import json
 import os
-import random
-import sys
+import readline
 
-DECK_EXTENSION = ".dck"
+# Set the completion function for tab completion
+def complete(text, state):
+    options = [name for name in os.listdir(".") if name.startswith(text)]
+    if state < len(options):
+        return options[state]
+    else:
+        return None
 
-def create_deck(deck_name):
-    deck = {"cards": []}
-    save_deck(deck, deck_name)
+def complete_decks(text, state):
+    options = [name for name in os.listdir(".") if name.startswith(text)]
+    if state < len(options):
+        return options[state] + " "
+    else:
+        return None
+
+# Enable tab completion
+readline.parse_and_bind("bind ^I rl_complete")
+readline.set_completer_delims("")
+readline.set_completer(complete)
+
+def get_deck_name(prompt):
+    try:
+        readline.set_completer(complete_decks)
+        return raw_input(prompt)
+    except (KeyboardInterrupt, EOFError):
+        return None
 
 def save_deck(deck, deck_name):
-    deck_file = deck_name + DECK_EXTENSION
-    with open(deck_file, "w") as file:
-        json.dump(deck, file)
+    # Save the deck to a .dck file
+    deck_filename = deck_name + '.dck'
+    with open(deck_filename, 'w') as file:
+        for card in deck:
+            answer = card[0]
+            question = card[1]
+            file.write("[[" + answer + "],[" + question + "]]\n")
 
 def load_deck(deck_name):
-    deck_file = deck_name + DECK_EXTENSION
-    if not os.path.isfile(deck_file):
-        print("Deck file not found.")
-        return None
-    with open(deck_file, "r") as file:
-        deck = json.load(file)
-    return deck
+    deck_filename = deck_name + '.dck'
+    try:
+        # Load the deck from the .dck file
+        with open(deck_filename, 'r') as file:
+            deck = []
+            for line in file:
+                line = line.strip()
+                if line:
+                    # Extract the answer and question
+                    parts = line.split('],[')
+                    answer = parts[0][2:]
+                    question = parts[1][:-2]
 
-def list_cards(deck):
-    for i, card in enumerate(deck["cards"]):
-        print("Index:", i)
-        print("Question:", card["question"])
-        print("Answer:", card["answer"])
-        print()
+                    card = [answer, question]
+                    deck.append(card)
+            return deck
+    except IOError:
+        print("Error: Deck file not found or cannot be opened.")
+        return []
 
-def create_card(deck, question, answer):
-    card = {"question": question, "answer": answer}
-    deck["cards"].append(card)
+def add_cards():
+    deck_name = get_deck_name("Enter the name of the deck: ")
+    if deck_name is None:
+        return
+
+    deck = load_deck(deck_name)
+
+    if not deck:
+        print("Deck not found. Creating new deck: " + deck_name)
+        deck = []
+
+    while True:
+        question = raw_input("Enter the question (or leave blank to exit): ")
+        if not question:
+            break
+
+        answer = raw_input("Enter the answer (or leave blank to exit): ")
+        if not answer:
+            break
+
+        card = [answer, question]
+        deck.append(card)
+
     save_deck(deck, deck_name)
 
-def delete_card(deck, index):
-    if index >= 0 and index < len(deck["cards"]):
-        deck["cards"].pop(index)
-        save_deck(deck, deck_name)
-        print("Card deleted.")
-    else:
+def edit_cards():
+    deck_name = get_deck_name("Enter the name of the deck to edit: ")
+    if deck_name is None:
+        return
+
+    deck = load_deck(deck_name)
+
+    if not deck:
+        print("Deck not found.")
+        return
+
+    print("Editing deck: " + deck_name)
+    for i, card in enumerate(deck):
+        print("Card " + str(i + 1) + ":")
+        question = raw_input("Enter the new question: ")
+        answer = raw_input("Enter the new answer: ")
+        card[0] = answer
+        card[1] = question
+
+    save_deck(deck, deck_name)
+
+def delete_card():
+    deck_name = get_deck_name("Enter the name of the deck to delete a card from: ")
+    if deck_name is None:
+        return
+
+    deck = load_deck(deck_name)
+
+    if not deck:
+        print("Deck not found.")
+        return
+
+    print("Deck: " + deck_name)
+    for i, card in enumerate(deck):
+        print("Card " + str(i + 1) + ": " + card[1])
+
+    card_index = raw_input("Enter the index of the card to delete: ")
+    try:
+        card_index = int(card_index)
+        if card_index < 1 or card_index > len(deck):
+            print("Invalid card index.")
+        else:
+            del deck[card_index - 1]
+            save_deck(deck, deck_name)
+            print("Card deleted.")
+    except ValueError:
         print("Invalid card index.")
 
-def study_deck(deck, randomize):
-    cards = deck["cards"]
-    if randomize:
-        random.shuffle(cards)
+def study_cards():
+    deck_name = get_deck_name("Enter the name of the deck to study: ")
+    if deck_name is None:
+        return
 
-    for card in cards:
-        print("Question:", card["question"])
-        input("Press Enter to reveal the answer...")
-        print("Answer:", card["answer"])
-        correct = input("Did you get the answer correct? (y/n): ")
-        if correct.lower() == "y":
-            deck["cards"].remove(card)
-            save_deck(deck, deck_name)
-            print("Card removed from the deck.")
-        print()
+    deck = load_deck(deck_name)
+
+    if not deck:
+        print("Deck not found.")
+        return
+
+    print("Studying deck: " + deck_name)
+    cards = deck[:]
+
+    while cards:
+        for card in cards:
+            print("Question:\n" + card[1])
+            raw_input("Press Enter to see the answer.")
+            print("Answer: " + card[0])
+
+            correct = raw_input("Did you answer correctly? (y/n): ")
+            if correct.lower() == 'y':
+                card.append('understood')
+
+        # Filter out the understood cards
+        cards = [card for card in cards if len(card) < 3]
+
+        if not cards:
+            print("Congratulations! You have understood all the cards.")
+        else:
+            reset = raw_input("Enter 'reset' to start over, 'end' to exit, or press Enter to continue: ")
+            if reset.lower() == 'reset':
+                for card in deck:
+                    card.pop(2, None)  # Remove 'understood' tag
+                cards = deck[:]
+            elif reset.lower() == 'end':
+                return
+
+    save_deck(deck, deck_name)
+
+def reset_cards():
+    deck_name = get_deck_name("Enter the name of the deck to reset: ")
+    if deck_name is None:
+        return
+
+    deck = load_deck(deck_name)
+
+    if not deck:
+        print("Deck not found.")
+        return
+
+    for card in deck:
+        card.pop(2, None)  # Remove 'understood' tag
+    save_deck(deck, deck_name)
+    print("Deck has been reset.")
+
+def main():
+    while True:
+        print("\n--- Flashcards ---")
+        print("1. Add Cards")
+        print("2. Edit Cards")
+        print("3. Delete Card")
+        print("4. Study Cards")
+        print("5. Reset Cards")
+        print("6. Quit")
+
+        choice = raw_input("Enter your choice (1-6): ")
+
+        if choice == '1':
+            add_cards()
+        elif choice == '2':
+            edit_cards()
+        elif choice == '3':
+            delete_card()
+        elif choice == '4':
+            study_cards()
+        elif choice == '5':
+            reset_cards()
+        elif choice == '6':
+            break
+        else:
+            print("Invalid choice. Please try again.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Flash Card Script")
-
-    # Create a new deck
-    parser.add_argument("-n", "--new", metavar="deck_name", help="Create a new deck")
-
-    # Output a deck file
-    parser.add_argument("-o", "--output", metavar="deck_name", help="Output a deck file")
-
-    # Edit a deck
-    parser.add_argument("-e", "--importDeck", metavar="deck_file", help="Edit a deck")
-
-    # Study a deck
-    parser.add_argument("-s", "--study", metavar="deck_file", help="Study a deck")
-
-    # Randomize questions
-    parser.add_argument("-r", "--randomize", action="store_true", help="Randomize the order of cards")
-
-    args = parser.parse_args()
-
-    if args.new:
-        create_deck(args.new)
-    elif args.output:
-        deck = load_deck(args.output)
-        if deck:
-            print(json.dumps(deck))
-    elif args.importDeck:
-        deck_name = os.path.splitext(args.importDeck)[0]
-        deck = load_deck(deck_name)
-        if deck:
-            while True:
-                print("Options:")
-                print("1. Create a new card")
-                print("2. Delete a card")
-                print("3. List all cards")
-                print("4. Exit")
-                option = input("Enter an option (1-4): ")
-                if option == "1":
-                    question = input("Enter the question: ")
-                    answer = input("Enter the answer: ")
-                    create_card(deck, question, answer)
-                elif option == "2":
-                    index = int(input("Enter the index of the card to delete: "))
-                    delete_card(deck, index)
-                elif option == "3":
-                    list_cards(deck)
-                elif option == "4":
-                    break
-                else:
-                    print("Invalid option.")
-    elif args.study:
-        deck_name = os.path.splitext(args.study)[0]
-        deck = load_deck(deck_name)
-        if deck:
-            study_deck(deck, args.randomize)
+    main()
