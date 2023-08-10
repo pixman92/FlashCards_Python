@@ -147,9 +147,9 @@ def study_cards():
 
     while cards:
         for card in cards:
-            print("Question:\n" + card[1])
+            print("\nQuestion:\n" + card[1])
             raw_input("Press Enter to see the answer.")
-            print("Answer: " + card[0])
+            print("\nAnswer: " + card[0])
 
             correct = raw_input("Did you answer correctly? (y/n): ")
             if correct.lower() == 'y':
